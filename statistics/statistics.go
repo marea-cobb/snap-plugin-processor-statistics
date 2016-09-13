@@ -26,6 +26,7 @@ import (
 	"math"
 	"reflect"
 	"strings"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/intelsdi-x/snap/control/plugin"
@@ -69,16 +70,19 @@ func New() *Plugin {
 }
 
 // calculateStats calaculates the descriptive statistics for buff
-func (p *Plugin) calculateStats(buff interface{}, m plugin.MetricType) ([]plugin.MetricType, error) {
+func (p *Plugin) calculateStats(buff interface{}, startTime time.Time, stopTime time.Time, namespace string) ([]plugin.MetricType, error) {
 	//result := make(map[string][]float64)
 	result := make([]plugin.MetricType, 15)
 	var buffer []float64
-
-	time := m.Timestamp()
-	tag := m.Tags()
-	lastTime := m.LastAdvertisedTime()
-	unit := m.Unit()
-	ns := strings.Join(m.Namespace().Strings(), " ")
+	tags := map[string]string{
+		"startTime": startTime.String(),
+		"stopTime":  stopTime.String(),
+	}
+	time := time.Now()
+	//	tag := m.Tags()
+	//	lastTime := m.LastAdvertisedTime()
+	//	unit := m.Unit()
+	//ns := strings.Join(m.Namespace().Strings(), " ")
 
 	//Need to change so it ranges over the current size of the buffer and not the capacity
 	for _, val := range buff.([]interface{}) {
@@ -437,40 +441,55 @@ func (p *Plugin) Process(contentType string, content []byte, config map[string]c
 	}
 	var results []plugin.MetricType
 
+	var metricNamespace map[string][]plugin.MetricType
 	for _, metric := range metrics {
-		switch reflect.ValueOf(metric.Data()).Kind() {
-		default:
-			st := fmt.Sprintf("Unkown data received: Type %T", reflect.ValueOf(metric.Data()).Kind())
-			log.Printf(st)
-			return "", nil, errors.New(st)
-		case reflect.Slice:
-			s := reflect.ValueOf(metric.Data())
-			for i := 0; i < s.Len(); i++ {
-				p.insertInToBuffer(s.Index(i).Interface(), metric.Namespace().Strings())
+		ns := concatNameSpace(metric.Namespace().Strings())
+		if plugins, ok := metricNamespace[ns]; ok {
+			plugins = append(plugins, metric)
+		} else {
+			metricNamespace[ns] = []plugin.MetricType{metric}
+		}
+	}
+
+	for k, v := range metricNamespace {
+		var startTime time.Time
+		var stopTime time.Time
+		//var rawData string
+
+		for _, metric := range v {
+			switch reflect.ValueOf(metric.Data()).Kind() {
+			default:
+				st := fmt.Sprintf("Unkown data received: Type %T", reflect.ValueOf(metric.Data()).Kind())
+				log.Printf(st)
+				return "", nil, errors.New(st)
+			case reflect.Slice:
+				s := reflect.ValueOf(metric.Data())
+				for i := 0; i < s.Len(); i++ {
+					p.insertInToBuffer(s.Index(i).Interface(), metric.Namespace().Strings())
+					p.updateCounters()
+				}
+			case reflect.Float64:
+				s := reflect.ValueOf(metric.Data())
+				time := reflect.ValueOf(metric.Timestamp())
+				p.insertInToBuffer(s.Interface(), metric.Namespace().Strings())
 				p.updateCounters()
 			}
-		case reflect.Float64:
-			s := reflect.ValueOf(metric.Data())
-			p.insertInToBuffer(s.Interface(), metric.Namespace().Strings())
-			p.updateCounters()
 		}
-
 		var err error
 		var stats []plugin.MetricType
 		if p.bufferCurSize < p.bufferMaxSize {
-			stats, err = p.calculateStats(p.buffer[concatNameSpace(metric.Namespace().Strings())][0:p.bufferCurSize], metric)
+			stats, err = p.calculateStats(p.buffer[k][0:p.bufferCurSize], startTime, stopTime, k)
 			if err != nil {
 				log.Printf("Error occured in calculating Statistics: %s", err)
 				return "", nil, err
 			}
 		} else {
-			stats, err = p.calculateStats(p.buffer[concatNameSpace(metric.Namespace().Strings())], metric)
+			stats, err = p.calculateStats(p.buffer[k], startTime, stopTime, k)
 			if err != nil {
 				log.Printf("Error occurred in calculating Statistics: %s", err)
 				return "", nil, err
 			}
 		}
-
 		results = append(results, stats...)
 	}
 
