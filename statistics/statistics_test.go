@@ -24,6 +24,7 @@ package statistics
 import (
 	"bytes"
 	"encoding/gob"
+	"log"
 	"math/rand"
 	"testing"
 	"time"
@@ -83,30 +84,45 @@ func TestStatisticsProcessor(t *testing.T) {
 func TestStatisticsProcessorMetrics(t *testing.T) {
 	Convey("Statistics Processor tests", t, func() {
 		metrics := make([]plugin.MetricType, 10)
+		data := [10]float64{5, 12, 7, 9, 33, 53, 24, 16, 18, 1}
 		config := make(map[string]ctypes.ConfigValue)
 
 		config["SlidingWindowLength"] = ctypes.ConfigValueInt{Value: -1}
 
 		Convey("Statistics for float64 data", func() {
 			for i := range metrics {
-				rand.Seed(time.Now().UTC().UnixNano())
-				data := randInt(23, 59)
 				metrics[i] = plugin.MetricType{
-					Data_:      float64(data),
+					Data_:      data[i],
 					Namespace_: core.NewNamespace("foo", "bar"),
 					Timestamp_: time.Now(),
 				}
 			}
+
 			var buf bytes.Buffer
 			enc := gob.NewEncoder(&buf)
 			enc.Encode(metrics)
 
-			movingAverageObj := New()
+			statisticsObj := New()
+			_, stats, err := statisticsObj.Process("snap.gob", buf.Bytes(), nil)
 
-			movingAverageObj.Process("snap.gob", buf.Bytes(), nil)
+			if err != nil {
+				log.Fatal(err)
+			}
 
-			var metricsNew []plugin.MetricType
-			So(metrics, ShouldNotResemble, metricsNew)
+			var results []plugin.MetricType
+			dec := gob.NewDecoder(bytes.NewBuffer(stats))
+			err = dec.Decode(&results)
+
+			if err != nil {
+				log.Fatal("decode", err)
+			}
+
+			for _, m := range results {
+				log.Println("MetricType: %v", m)
+			}
+
+			//var metricsNew []plugin.MetricType
+			//So(metrics, ShouldNotResemble, metricsNew)
 		})
 
 		Convey("Statistics for unknown data type", func() {

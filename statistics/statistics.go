@@ -22,12 +22,15 @@ import (
 	"bytes"
 	"encoding/gob"
 	"errors"
+	"fmt"
 	"math"
+	"reflect"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/intelsdi-x/snap/control/plugin"
 	"github.com/intelsdi-x/snap/control/plugin/cpolicy"
+	"github.com/intelsdi-x/snap/core"
 	"github.com/intelsdi-x/snap/core/ctypes"
 	"github.com/montanaflynn/stats"
 )
@@ -66,14 +69,18 @@ func New() *Plugin {
 }
 
 // calculateStats calaculates the descriptive statistics for buff
-func (p *Plugin) calculateStats(buff interface{}) (map[string][]float64, error) {
-	result := make(map[string][]float64)
-
+func (p *Plugin) calculateStats(buff interface{}, m plugin.MetricType) ([]plugin.MetricType, error) {
+	//result := make(map[string][]float64)
+	result := make([]plugin.MetricType, 15)
 	var buffer []float64
 
-	log.Printf("Buff %v", buff)
+	time := m.Timestamp()
+	tag := m.Tags()
+	lastTime := m.LastAdvertisedTime()
+	unit := m.Unit()
+	ns := strings.Join(m.Namespace().Strings(), " ")
 
-	var valRange []float64 //stores range values
+	//Need to change so it ranges over the current size of the buffer and not the capacity
 	for _, val := range buff.([]interface{}) {
 		switch v := val.(type) {
 		default:
@@ -96,94 +103,214 @@ func (p *Plugin) calculateStats(buff interface{}) (map[string][]float64, error) 
 		}
 	}
 
-	log.Printf("Buffer %v", buffer)
-
-	result["Count"] = []float64{float64(len(buffer))}
+	count := plugin.MetricType{
+		Data_:               float64(len(buffer)),
+		Namespace_:          core.NewNamespace(ns, "Count"),
+		Timestamp_:          time,
+		LastAdvertisedTime_: lastTime,
+		Unit_:               unit,
+		Tags_:               tag,
+	}
+	result[0] = count
 
 	val, err := stats.Mean(buffer)
 	if err != nil {
+		log.Println("Error in mean")
 		return nil, err
 	}
-
-	result["mean"] = []float64{val}
+	mean := plugin.MetricType{
+		Data_:               val,
+		Namespace_:          core.NewNamespace(ns, "Mean"),
+		Timestamp_:          time,
+		LastAdvertisedTime_: lastTime,
+		Unit_:               unit,
+		Tags_:               tag,
+	}
+	result[1] = mean
 
 	val, err = stats.Median(buffer)
 	if err != nil {
+		log.Println("Error in Median")
 		return nil, err
 	}
-
-	result["median"] = []float64{val}
+	median := plugin.MetricType{
+		Data_:               val,
+		Namespace_:          core.NewNamespace(ns, "Median"),
+		Timestamp_:          time,
+		LastAdvertisedTime_: lastTime,
+		Unit_:               unit,
+		Tags_:               tag,
+	}
+	result[2] = median
 
 	val, err = stats.StandardDeviation(buffer)
 	if err != nil {
+		log.Println("Error in Standard Dev.")
 		return nil, err
 	}
-
-	result["stddev"] = []float64{val}
+	stdev := plugin.MetricType{
+		Data_:               val,
+		Namespace_:          core.NewNamespace(ns, "Standard Deviation"),
+		Timestamp_:          time,
+		LastAdvertisedTime_: lastTime,
+		Unit_:               unit,
+		Tags_:               tag,
+	}
+	result[3] = stdev
 
 	val, err = stats.Variance(buffer)
 	if err != nil {
+		log.Println("Error in Variance")
 		return nil, err
 	}
-
-	result["var"] = []float64{val}
+	variance := plugin.MetricType{
+		Data_:               val,
+		Namespace_:          core.NewNamespace(ns, "Variance"),
+		Timestamp_:          time,
+		LastAdvertisedTime_: lastTime,
+		Unit_:               unit,
+		Tags_:               tag,
+	}
+	result[4] = variance
 
 	val, err = stats.Percentile(buffer, 95)
 	if err != nil {
+		log.Printf("Error in 95%%")
 		return nil, err
 	}
-
-	result["95%-ile"] = []float64{val}
+	pct95 := plugin.MetricType{
+		Data_:               val,
+		Namespace_:          core.NewNamespace(ns, "95%-ile"),
+		Timestamp_:          time,
+		LastAdvertisedTime_: lastTime,
+		Unit_:               unit,
+		Tags_:               tag,
+	}
+	result[5] = pct95
 
 	val, err = stats.Percentile(buffer, 99)
 	if err != nil {
+		log.Printf("Error in 99%%")
 		return nil, err
 	}
-
-	result["99%-ile"] = []float64{val}
+	pct99 := plugin.MetricType{
+		Data_:               val,
+		Namespace_:          core.NewNamespace(ns, "99%-ile"),
+		Timestamp_:          time,
+		LastAdvertisedTime_: lastTime,
+		Unit_:               unit,
+		Tags_:               tag,
+	}
+	result[6] = pct99
 
 	val, err = stats.Min(buffer)
 	if err != nil {
+		log.Println("Error in min")
 		return nil, err
 	}
+	min := plugin.MetricType{
+		Data_:               val,
+		Namespace_:          core.NewNamespace(ns, "minimum"),
+		Timestamp_:          time,
+		LastAdvertisedTime_: lastTime,
+		Unit_:               unit,
+		Tags_:               tag,
+	}
+	result[7] = min
 
-	result["Minimum"] = []float64{val}
-	valRange = append(valRange, val)
+	minval := val
 
 	val, err = stats.Max(buffer)
 	if err != nil {
+		log.Println("Error in max")
 		return nil, err
 	}
+	max := plugin.MetricType{
+		Data_:               val,
+		Namespace_:          core.NewNamespace(ns, "maximum"),
+		Timestamp_:          time,
+		LastAdvertisedTime_: lastTime,
+		Unit_:               unit,
+		Tags_:               tag,
+	}
+	result[8] = max
 
-	result["Maximum"] = []float64{val}
-	valRange = append(valRange, val)
-
-	result["Range"] = valRange
+	rangeval := plugin.MetricType{
+		Data_:               val - minval,
+		Namespace_:          core.NewNamespace(ns, "rangeval"),
+		Timestamp_:          time,
+		LastAdvertisedTime_: lastTime,
+		Unit_:               unit,
+		Tags_:               tag,
+	}
+	result[9] = rangeval
 
 	var valArr []float64
 	valArr, err = stats.Mode(buffer)
 	if err != nil {
+		log.Println("Error in mode")
 		return nil, err
 	}
-
-	result["Mode"] = valArr
+	modeval := plugin.MetricType{
+		Data_:               valArr,
+		Namespace_:          core.NewNamespace(ns, "mode"),
+		Timestamp_:          time,
+		LastAdvertisedTime_: lastTime,
+		Unit_:               unit,
+		Tags_:               tag,
+	}
+	result[10] = modeval
 
 	val, err = stats.Sum(buffer)
 	if err != nil {
+		log.Println("Error in sum")
 		return nil, err
 	}
+	sumval := plugin.MetricType{
+		Data_:               val,
+		Namespace_:          core.NewNamespace(ns, "sum"),
+		Timestamp_:          time,
+		LastAdvertisedTime_: lastTime,
+		Unit_:               unit,
+		Tags_:               tag,
+	}
+	result[11] = sumval
 
-	result["Kurtosis"] = p.Kurtosis(buffer)
-	result["Skewness"] = p.Skewness(buffer)
+	kurtosis := plugin.MetricType{
+		Data_:               p.Kurtosis(buffer),
+		Namespace_:          core.NewNamespace(ns, "kurtosis"),
+		Timestamp_:          time,
+		LastAdvertisedTime_: lastTime,
+		Unit_:               unit,
+		Tags_:               tag,
+	}
+	result[12] = kurtosis
 
-	result["Sum"] = []float64{val}
+	skewness := plugin.MetricType{
+		Data_:               p.Skewness(buffer),
+		Namespace_:          core.NewNamespace(ns, "skewness"),
+		Timestamp_:          time,
+		LastAdvertisedTime_: lastTime,
+		Unit_:               unit,
+		Tags_:               tag,
+	}
+	result[13] = skewness
 
 	val, err = stats.Trimean(buffer)
 	if err != nil {
+		log.Println("Error in trimean")
 		return nil, err
 	}
+	trimean := plugin.MetricType{
+		Data_:               val,
+		Namespace_:          core.NewNamespace(ns, "trimean"),
+		Timestamp_:          time,
+		LastAdvertisedTime_: lastTime,
+		Unit_:               unit,
+		Tags_:               tag,
+	}
+	result[14] = trimean
 
-	result["Trimean"] = []float64{val}
 	return result, nil
 }
 
@@ -193,20 +320,24 @@ func (p *Plugin) Skewness(buffer []float64) []float64 {
 		log.Printf("Buffer does not contain any data.")
 		return []float64{}
 	}
-	var num float64
-	var den float64
+	var skew float64
 	var mean float64
+	var stdev float64
 
 	mean, err := stats.Mean(buffer)
 	if err != nil {
 		log.Fatal(err)
 	}
-	for _, val := range buffer {
-		num += math.Pow(val-mean, 3)
-		den += math.Pow(val-mean, 2)
+	stdev, err = stats.StandardDeviation(buffer)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	return []float64{math.Sqrt(float64(len(buffer))) * num / math.Pow(den, 3/2)}
+	for _, val := range buffer {
+		skew += math.Pow((val-mean)/stdev, 3)
+	}
+
+	return []float64{(1 / float64(len(buffer)) * skew)}
 
 }
 
@@ -216,8 +347,8 @@ func (p *Plugin) Kurtosis(buffer []float64) []float64 {
 		log.Printf("Buffer does not contain any data.")
 		return []float64{}
 	}
-	var num float64
-	var den float64
+	var kurt float64
+	var stdev float64
 	var mean float64
 
 	mean, err := stats.Mean(buffer)
@@ -225,11 +356,15 @@ func (p *Plugin) Kurtosis(buffer []float64) []float64 {
 		log.Fatal(err)
 	}
 
-	for _, val := range buffer {
-		num += math.Pow(val-mean, 4)
-		den += math.Pow(val-mean, 2)
+	stdev, err = stats.StandardDeviation(buffer)
+	if err != nil {
+		log.Fatal(err)
 	}
-	return []float64{float64(len(buffer)) * num / math.Pow(den, 2)}
+
+	for _, val := range buffer {
+		kurt += math.Pow((val-mean)/stdev, 4)
+	}
+	return []float64{(1 / float64(len(buffer)) * kurt)}
 }
 
 // concatNameSpace combines an array of namespces into a single string
@@ -242,12 +377,10 @@ func concatNameSpace(namespace []string) string {
 func (p *Plugin) insertInToBuffer(val interface{}, ns []string) {
 
 	if p.bufferCurSize == 0 {
-		log.Printf("In if statement with buffer max size %v", p.bufferMaxSize)
 		var buff = make([]interface{}, p.bufferMaxSize)
 		buff[0] = val
 		p.buffer[concatNameSpace(ns)] = buff
 	} else {
-		log.Printf("In else statement with index %v", p.bufferIndex)
 		p.buffer[concatNameSpace(ns)][p.bufferIndex] = val
 	}
 }
@@ -302,34 +435,48 @@ func (p *Plugin) Process(contentType string, content []byte, config map[string]c
 		log.Printf("Error decoding: error=%v content=%v", err, content)
 		return "", nil, err
 	}
+	var results []plugin.MetricType
 
 	for _, metric := range metrics {
-		log.Printf("Data received %v", metric.Data())
-		p.insertInToBuffer(metric.Data(), metric.Namespace().Strings())
-	}
+		switch reflect.ValueOf(metric.Data()).Kind() {
+		default:
+			st := fmt.Sprintf("Unkown data received: Type %T", reflect.ValueOf(metric.Data()).Kind())
+			log.Printf(st)
+			return "", nil, errors.New(st)
+		case reflect.Slice:
+			s := reflect.ValueOf(metric.Data())
+			for i := 0; i < s.Len(); i++ {
+				p.insertInToBuffer(s.Index(i).Interface(), metric.Namespace().Strings())
+				p.updateCounters()
+			}
+		case reflect.Float64:
+			s := reflect.ValueOf(metric.Data())
+			p.insertInToBuffer(s.Interface(), metric.Namespace().Strings())
+			p.updateCounters()
+		}
 
-	p.updateCounters()
-
-	for _, metric := range metrics {
 		var err error
+		var stats []plugin.MetricType
 		if p.bufferCurSize < p.bufferMaxSize {
-			metric.Data_, err = p.calculateStats(p.buffer[concatNameSpace(metric.Namespace().Strings())][0:p.bufferCurSize])
+			stats, err = p.calculateStats(p.buffer[concatNameSpace(metric.Namespace().Strings())][0:p.bufferCurSize], metric)
 			if err != nil {
+				log.Printf("Error occured in calculating Statistics: %s", err)
+				return "", nil, err
+			}
+		} else {
+			stats, err = p.calculateStats(p.buffer[concatNameSpace(metric.Namespace().Strings())], metric)
+			if err != nil {
+				log.Printf("Error occurred in calculating Statistics: %s", err)
 				return "", nil, err
 			}
 		}
-		metric.Data_, err = p.calculateStats(p.buffer[concatNameSpace(metric.Namespace().Strings())])
-		if err != nil {
-			return "", nil, err
-		}
 
-		log.Printf("Statistics %v", metric.Data())
+		results = append(results, stats...)
 	}
 
-	gob.Register(map[string]float64{})
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
-	if err := enc.Encode(metrics); err != nil {
+	if err := enc.Encode(results); err != nil {
 		return "", nil, err
 	}
 
