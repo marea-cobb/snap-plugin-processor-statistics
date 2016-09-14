@@ -148,7 +148,7 @@ func (p *Plugin) calculateStats(buff interface{}, m plugin.MetricType) ([]plugin
 		log.Println("Error in Standard Dev.")
 		return nil, err
 	}
-	stdev := plugin.MetricType{
+	standarddev := plugin.MetricType{
 		Data_:               val,
 		Namespace_:          core.NewNamespace(ns, "Standard Deviation"),
 		Timestamp_:          time,
@@ -156,7 +156,7 @@ func (p *Plugin) calculateStats(buff interface{}, m plugin.MetricType) ([]plugin
 		Unit_:               unit,
 		Tags_:               tag,
 	}
-	result[3] = stdev
+	result[3] = standarddev
 
 	val, err = stats.Variance(buffer)
 	if err != nil {
