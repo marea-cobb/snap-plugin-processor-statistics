@@ -109,11 +109,11 @@ func (p *Plugin) calculateStats(buff interface{}, startTime time.Time, stopTime 
 
 	count := plugin.MetricType{
 		Data_:               float64(len(buffer)),
-		Namespace_:          core.NewNamespace(ns, "Count"),
+		Namespace_:          core.NewNamespace(namespace, "Count"),
 		Timestamp_:          time,
-		LastAdvertisedTime_: lastTime,
+		LastAdvertisedTime_: time,
 		Unit_:               unit,
-		Tags_:               tag,
+		Tags_:               tags,
 	}
 	result[0] = count
 
@@ -124,11 +124,11 @@ func (p *Plugin) calculateStats(buff interface{}, startTime time.Time, stopTime 
 	}
 	mean := plugin.MetricType{
 		Data_:               val,
-		Namespace_:          core.NewNamespace(ns, "Mean"),
+		Namespace_:          core.NewNamespace(namespace, "Mean"),
 		Timestamp_:          time,
-		LastAdvertisedTime_: lastTime,
+		LastAdvertisedTime_: time,
 		Unit_:               unit,
-		Tags_:               tag,
+		Tags_:               tags,
 	}
 	result[1] = mean
 
@@ -139,11 +139,11 @@ func (p *Plugin) calculateStats(buff interface{}, startTime time.Time, stopTime 
 	}
 	median := plugin.MetricType{
 		Data_:               val,
-		Namespace_:          core.NewNamespace(ns, "Median"),
+		Namespace_:          core.NewNamespace(namespace, "Median"),
 		Timestamp_:          time,
-		LastAdvertisedTime_: lastTime,
+		LastAdvertisedTime_: time,
 		Unit_:               unit,
-		Tags_:               tag,
+		Tags_:               tags,
 	}
 	result[2] = median
 
@@ -154,11 +154,11 @@ func (p *Plugin) calculateStats(buff interface{}, startTime time.Time, stopTime 
 	}
 	standarddev := plugin.MetricType{
 		Data_:               val,
-		Namespace_:          core.NewNamespace(ns, "Standard Deviation"),
+		Namespace_:          core.NewNamespace(namespace, "Standard Deviation"),
 		Timestamp_:          time,
-		LastAdvertisedTime_: lastTime,
+		LastAdvertisedTime_: time,
 		Unit_:               unit,
-		Tags_:               tag,
+		Tags_:               tags,
 	}
 	result[3] = standarddev
 
@@ -169,11 +169,11 @@ func (p *Plugin) calculateStats(buff interface{}, startTime time.Time, stopTime 
 	}
 	variance := plugin.MetricType{
 		Data_:               val,
-		Namespace_:          core.NewNamespace(ns, "Variance"),
+		Namespace_:          core.NewNamespace(namespace, "Variance"),
 		Timestamp_:          time,
-		LastAdvertisedTime_: lastTime,
+		LastAdvertisedTime_: time,
 		Unit_:               unit,
-		Tags_:               tag,
+		Tags_:               tags,
 	}
 	result[4] = variance
 
@@ -184,11 +184,11 @@ func (p *Plugin) calculateStats(buff interface{}, startTime time.Time, stopTime 
 	}
 	pct95 := plugin.MetricType{
 		Data_:               val,
-		Namespace_:          core.NewNamespace(ns, "95%-ile"),
+		Namespace_:          core.NewNamespace(namespace, "95%-ile"),
 		Timestamp_:          time,
-		LastAdvertisedTime_: lastTime,
+		LastAdvertisedTime_: time,
 		Unit_:               unit,
-		Tags_:               tag,
+		Tags_:               tags,
 	}
 	result[5] = pct95
 
@@ -199,11 +199,11 @@ func (p *Plugin) calculateStats(buff interface{}, startTime time.Time, stopTime 
 	}
 	pct99 := plugin.MetricType{
 		Data_:               val,
-		Namespace_:          core.NewNamespace(ns, "99%-ile"),
+		Namespace_:          core.NewNamespace(namespace, "99%-ile"),
 		Timestamp_:          time,
-		LastAdvertisedTime_: lastTime,
+		LastAdvertisedTime_: time,
 		Unit_:               unit,
-		Tags_:               tag,
+		Tags_:               tags,
 	}
 	result[6] = pct99
 
@@ -214,11 +214,11 @@ func (p *Plugin) calculateStats(buff interface{}, startTime time.Time, stopTime 
 	}
 	min := plugin.MetricType{
 		Data_:               val,
-		Namespace_:          core.NewNamespace(ns, "minimum"),
+		Namespace_:          core.NewNamespace(namespace, "minimum"),
 		Timestamp_:          time,
-		LastAdvertisedTime_: lastTime,
+		LastAdvertisedTime_: time,
 		Unit_:               unit,
-		Tags_:               tag,
+		Tags_:               tags,
 	}
 	result[7] = min
 
@@ -231,21 +231,21 @@ func (p *Plugin) calculateStats(buff interface{}, startTime time.Time, stopTime 
 	}
 	max := plugin.MetricType{
 		Data_:               val,
-		Namespace_:          core.NewNamespace(ns, "maximum"),
+		Namespace_:          core.NewNamespace(namespace, "maximum"),
 		Timestamp_:          time,
-		LastAdvertisedTime_: lastTime,
+		LastAdvertisedTime_: time,
 		Unit_:               unit,
-		Tags_:               tag,
+		Tags_:               tags,
 	}
 	result[8] = max
 
 	rangeval := plugin.MetricType{
 		Data_:               val - minval,
-		Namespace_:          core.NewNamespace(ns, "rangeval"),
+		Namespace_:          core.NewNamespace(namespace, "rangeval"),
 		Timestamp_:          time,
-		LastAdvertisedTime_: lastTime,
+		LastAdvertisedTime_: time,
 		Unit_:               unit,
-		Tags_:               tag,
+		Tags_:               tags,
 	}
 	result[9] = rangeval
 
@@ -257,11 +257,11 @@ func (p *Plugin) calculateStats(buff interface{}, startTime time.Time, stopTime 
 	}
 	modeval := plugin.MetricType{
 		Data_:               valArr,
-		Namespace_:          core.NewNamespace(ns, "mode"),
+		Namespace_:          core.NewNamespace(namespace, "mode"),
 		Timestamp_:          time,
-		LastAdvertisedTime_: lastTime,
+		LastAdvertisedTime_: time,
 		Unit_:               unit,
-		Tags_:               tag,
+		Tags_:               tags,
 	}
 	result[10] = modeval
 
@@ -272,31 +272,31 @@ func (p *Plugin) calculateStats(buff interface{}, startTime time.Time, stopTime 
 	}
 	sumval := plugin.MetricType{
 		Data_:               val,
-		Namespace_:          core.NewNamespace(ns, "sum"),
+		Namespace_:          core.NewNamespace(namespace, "sum"),
 		Timestamp_:          time,
-		LastAdvertisedTime_: lastTime,
+		LastAdvertisedTime_: time,
 		Unit_:               unit,
-		Tags_:               tag,
+		Tags_:               tags,
 	}
 	result[11] = sumval
 
 	kurtosis := plugin.MetricType{
 		Data_:               p.Kurtosis(buffer),
-		Namespace_:          core.NewNamespace(ns, "kurtosis"),
+		Namespace_:          core.NewNamespace(namespace, "kurtosis"),
 		Timestamp_:          time,
-		LastAdvertisedTime_: lastTime,
+		LastAdvertisedTime_: time,
 		Unit_:               unit,
-		Tags_:               tag,
+		Tags_:               tags,
 	}
 	result[12] = kurtosis
 
 	skewness := plugin.MetricType{
 		Data_:               p.Skewness(buffer),
-		Namespace_:          core.NewNamespace(ns, "skewness"),
+		Namespace_:          core.NewNamespace(namespace, "skewness"),
 		Timestamp_:          time,
-		LastAdvertisedTime_: lastTime,
+		LastAdvertisedTime_: time,
 		Unit_:               unit,
-		Tags_:               tag,
+		Tags_:               tags,
 	}
 	result[13] = skewness
 
@@ -307,11 +307,11 @@ func (p *Plugin) calculateStats(buff interface{}, startTime time.Time, stopTime 
 	}
 	trimean := plugin.MetricType{
 		Data_:               val,
-		Namespace_:          core.NewNamespace(ns, "trimean"),
+		Namespace_:          core.NewNamespace(namespace, "trimean"),
 		Timestamp_:          time,
-		LastAdvertisedTime_: lastTime,
+		LastAdvertisedTime_: time,
 		Unit_:               unit,
-		Tags_:               tag,
+		Tags_:               tags,
 	}
 	result[14] = trimean
 
