@@ -87,7 +87,7 @@ func TestStatisticsProcessorMetrics(t *testing.T) {
 		data := [10]float64{5, 12, 7, 9, 33, 53, 24, 16, 18, 1}
 		config := make(map[string]ctypes.ConfigValue)
 
-		config["SlidingWindowLength"] = ctypes.ConfigValueInt{Value: -1}
+		config["SlidingWindowLength"] = ctypes.ConfigValueInt{Value: 5}
 
 		Convey("Statistics for float64 data", func() {
 			for i := range metrics {
@@ -103,7 +103,7 @@ func TestStatisticsProcessorMetrics(t *testing.T) {
 			enc.Encode(metrics)
 
 			statisticsObj := New()
-			_, stats, err := statisticsObj.Process("snap.gob", buf.Bytes(), nil)
+			_, stats, err := statisticsObj.Process("snap.gob", buf.Bytes(), config)
 
 			if err != nil {
 				log.Fatal(err)
@@ -118,11 +118,51 @@ func TestStatisticsProcessorMetrics(t *testing.T) {
 			}
 
 			for _, m := range results {
-				log.Println("MetricType: %v", m)
+				log.Println(m)
 			}
 
-			//var metricsNew []plugin.MetricType
-			//So(metrics, ShouldNotResemble, metricsNew)
+			for _, m := range results {
+				ns := m.Namespace().Strings()[1]
+
+				switch {
+				case ns == "Count":
+					So(m.Data(), ShouldAlmostEqual, 10, 0.01)
+				case ns == "Mean":
+					So(m.Data(), ShouldAlmostEqual, 17.8, 0.01)
+				case ns == "Median":
+					So(m.Data(), ShouldAlmostEqual, 14, 0.01)
+				case ns == "Trimean":
+					So(m.Data(), ShouldAlmostEqual, 14.75, 0.01)
+				case ns == "Range":
+					So(m.Data(), ShouldAlmostEqual, 52, 0.01)
+				case ns == "Sum":
+					So(m.Data(), ShouldAlmostEqual, 178, 0.01)
+				case ns == "Kurtosis":
+					So(m.Data(), ShouldAlmostEqual, 3.595, 0.01)
+				case ns == "Skewness":
+					So(m.Data(), ShouldAlmostEqual, 1.187, 0.01)
+				case ns == "Standard Deviation":
+					So(m.Data(), ShouldAlmostEqual, 14.783, 0.01)
+				case ns == "Variance":
+					So(m.Data(), ShouldAlmostEqual, 218.56, 0.01)
+				case ns == "Maximum":
+					So(m.Data(), ShouldAlmostEqual, 53, 0.01)
+				case ns == "Minimum":
+					So(m.Data(), ShouldAlmostEqual, 1, 0.01)
+				case ns == "99%-ile":
+					So(m.Data(), ShouldAlmostEqual, 53, 0.01)
+				case ns == "95%-ile":
+					So(m.Data(), ShouldAlmostEqual, 53, 0.01)
+				case ns == "Mode":
+					So(m.Data(), ShouldResemble, []float64(nil))
+				default:
+					log.Println("Raw metric found")
+					log.Println("Data: %v", ns)
+				}
+			}
+
+			var metricsNew []plugin.MetricType
+			So(metrics, ShouldNotResemble, metricsNew)
 		})
 
 		Convey("Statistics for unknown data type", func() {
@@ -139,9 +179,8 @@ func TestStatisticsProcessorMetrics(t *testing.T) {
 			enc := gob.NewEncoder(&buf)
 			enc.Encode(metrics)
 
-			movingAverageObj := New()
-
-			_, receivedData, _ := movingAverageObj.Process("snap.gob", buf.Bytes(), nil)
+			statisticObj := New()
+			_, receivedData, _ := statisticObj.Process("snap.gob", buf.Bytes(), config)
 
 			var metricsNew []plugin.MetricType
 

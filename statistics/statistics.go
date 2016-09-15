@@ -70,8 +70,7 @@ func New() *Plugin {
 }
 
 // calculateStats calaculates the descriptive statistics for buff
-func (p *Plugin) calculateStats(buff interface{}, startTime time.Time, stopTime time.Time, namespace string) ([]plugin.MetricType, error) {
-	//result := make(map[string][]float64)
+func (p *Plugin) calculateStats(buff interface{}, startTime time.Time, stopTime time.Time, namespace string, unit string) ([]plugin.MetricType, error) {
 	result := make([]plugin.MetricType, 15)
 	var buffer []float64
 	tags := map[string]string{
@@ -79,10 +78,6 @@ func (p *Plugin) calculateStats(buff interface{}, startTime time.Time, stopTime 
 		"stopTime":  stopTime.String(),
 	}
 	time := time.Now()
-	//	tag := m.Tags()
-	//	lastTime := m.LastAdvertisedTime()
-	//	unit := m.Unit()
-	//ns := strings.Join(m.Namespace().Strings(), " ")
 
 	//Need to change so it ranges over the current size of the buffer and not the capacity
 	for _, val := range buff.([]interface{}) {
@@ -214,7 +209,7 @@ func (p *Plugin) calculateStats(buff interface{}, startTime time.Time, stopTime 
 	}
 	min := plugin.MetricType{
 		Data_:               val,
-		Namespace_:          core.NewNamespace(namespace, "minimum"),
+		Namespace_:          core.NewNamespace(namespace, "Minimum"),
 		Timestamp_:          time,
 		LastAdvertisedTime_: time,
 		Unit_:               unit,
@@ -231,7 +226,7 @@ func (p *Plugin) calculateStats(buff interface{}, startTime time.Time, stopTime 
 	}
 	max := plugin.MetricType{
 		Data_:               val,
-		Namespace_:          core.NewNamespace(namespace, "maximum"),
+		Namespace_:          core.NewNamespace(namespace, "Maximum"),
 		Timestamp_:          time,
 		LastAdvertisedTime_: time,
 		Unit_:               unit,
@@ -241,7 +236,7 @@ func (p *Plugin) calculateStats(buff interface{}, startTime time.Time, stopTime 
 
 	rangeval := plugin.MetricType{
 		Data_:               val - minval,
-		Namespace_:          core.NewNamespace(namespace, "rangeval"),
+		Namespace_:          core.NewNamespace(namespace, "Range"),
 		Timestamp_:          time,
 		LastAdvertisedTime_: time,
 		Unit_:               unit,
@@ -257,7 +252,7 @@ func (p *Plugin) calculateStats(buff interface{}, startTime time.Time, stopTime 
 	}
 	modeval := plugin.MetricType{
 		Data_:               valArr,
-		Namespace_:          core.NewNamespace(namespace, "mode"),
+		Namespace_:          core.NewNamespace(namespace, "Mode"),
 		Timestamp_:          time,
 		LastAdvertisedTime_: time,
 		Unit_:               unit,
@@ -272,7 +267,7 @@ func (p *Plugin) calculateStats(buff interface{}, startTime time.Time, stopTime 
 	}
 	sumval := plugin.MetricType{
 		Data_:               val,
-		Namespace_:          core.NewNamespace(namespace, "sum"),
+		Namespace_:          core.NewNamespace(namespace, "Sum"),
 		Timestamp_:          time,
 		LastAdvertisedTime_: time,
 		Unit_:               unit,
@@ -282,7 +277,7 @@ func (p *Plugin) calculateStats(buff interface{}, startTime time.Time, stopTime 
 
 	kurtosis := plugin.MetricType{
 		Data_:               p.Kurtosis(buffer),
-		Namespace_:          core.NewNamespace(namespace, "kurtosis"),
+		Namespace_:          core.NewNamespace(namespace, "Kurtosis"),
 		Timestamp_:          time,
 		LastAdvertisedTime_: time,
 		Unit_:               unit,
@@ -292,7 +287,7 @@ func (p *Plugin) calculateStats(buff interface{}, startTime time.Time, stopTime 
 
 	skewness := plugin.MetricType{
 		Data_:               p.Skewness(buffer),
-		Namespace_:          core.NewNamespace(namespace, "skewness"),
+		Namespace_:          core.NewNamespace(namespace, "Skewness"),
 		Timestamp_:          time,
 		LastAdvertisedTime_: time,
 		Unit_:               unit,
@@ -307,7 +302,7 @@ func (p *Plugin) calculateStats(buff interface{}, startTime time.Time, stopTime 
 	}
 	trimean := plugin.MetricType{
 		Data_:               val,
-		Namespace_:          core.NewNamespace(namespace, "trimean"),
+		Namespace_:          core.NewNamespace(namespace, "Trimean"),
 		Timestamp_:          time,
 		LastAdvertisedTime_: time,
 		Unit_:               unit,
@@ -319,10 +314,10 @@ func (p *Plugin) calculateStats(buff interface{}, startTime time.Time, stopTime 
 }
 
 //Calculates the population skewness from buffer
-func (p *Plugin) Skewness(buffer []float64) []float64 {
+func (p *Plugin) Skewness(buffer []float64) float64 {
 	if len(buffer) == 0 {
 		log.Printf("Buffer does not contain any data.")
-		return []float64{}
+		return 0
 	}
 	var skew float64
 	var mean float64
@@ -341,15 +336,15 @@ func (p *Plugin) Skewness(buffer []float64) []float64 {
 		skew += math.Pow((val-mean)/stdev, 3)
 	}
 
-	return []float64{(1 / float64(len(buffer)) * skew)}
+	return float64(1 / float64(len(buffer)) * skew)
 
 }
 
 //Calculates the population kurtosis from buffer
-func (p *Plugin) Kurtosis(buffer []float64) []float64 {
+func (p *Plugin) Kurtosis(buffer []float64) float64 {
 	if len(buffer) == 0 {
 		log.Printf("Buffer does not contain any data.")
-		return []float64{}
+		return 0
 	}
 	var kurt float64
 	var stdev float64
@@ -368,12 +363,12 @@ func (p *Plugin) Kurtosis(buffer []float64) []float64 {
 	for _, val := range buffer {
 		kurt += math.Pow((val-mean)/stdev, 4)
 	}
-	return []float64{(1 / float64(len(buffer)) * kurt)}
+	return float64(1 / float64(len(buffer)) * kurt)
 }
 
 // concatNameSpace combines an array of namespces into a single string
 func concatNameSpace(namespace []string) string {
-	completeNamespace := strings.Join(namespace, "/")
+	completeNamespace := strings.Join(namespace, "/")p.buffer[concatNameSpace(ns)][p.bufferIndex] = val
 	return completeNamespace
 }
 
@@ -441,11 +436,12 @@ func (p *Plugin) Process(contentType string, content []byte, config map[string]c
 	}
 	var results []plugin.MetricType
 
-	var metricNamespace map[string][]plugin.MetricType
+	metricNamespace := make(map[string][]plugin.MetricType)
 	for _, metric := range metrics {
 		ns := concatNameSpace(metric.Namespace().Strings())
 		if plugins, ok := metricNamespace[ns]; ok {
 			plugins = append(plugins, metric)
+			metricNamespace[ns] = plugins
 		} else {
 			metricNamespace[ns] = []plugin.MetricType{metric}
 		}
@@ -454,43 +450,76 @@ func (p *Plugin) Process(contentType string, content []byte, config map[string]c
 	for k, v := range metricNamespace {
 		var startTime time.Time
 		var stopTime time.Time
-		//var rawData string
+		unit := v[0].Unit()
 
 		for _, metric := range v {
+
+			time := metric.Timestamp()
+			if startTime.IsZero() {
+				startTime = time
+			} else if time.Sub(startTime) < 0 {
+				startTime = time
+			}
+
+			if stopTime.IsZero() {
+				stopTime = time
+			} else if time.Sub(stopTime) > 0 {
+				stopTime = time
+			}
+
 			switch reflect.ValueOf(metric.Data()).Kind() {
 			default:
 				st := fmt.Sprintf("Unkown data received: Type %T", reflect.ValueOf(metric.Data()).Kind())
-				log.Printf(st)
 				return "", nil, errors.New(st)
-			case reflect.Slice:
-				s := reflect.ValueOf(metric.Data())
-				for i := 0; i < s.Len(); i++ {
-					p.insertInToBuffer(s.Index(i).Interface(), metric.Namespace().Strings())
-					p.updateCounters()
-				}
 			case reflect.Float64:
 				s := reflect.ValueOf(metric.Data())
-				time := reflect.ValueOf(metric.Timestamp())
+				p.insertInToBuffer(s.Interface(), metric.Namespace().Strings())
+				p.updateCounters()
+			case reflect.Float32:
+				s := reflect.ValueOf(metric.Data())
+				p.insertInToBuffer(s.Interface(), metric.Namespace().Strings())
+				p.updateCounters()
+			case reflect.Int64:
+				s := reflect.ValueOf(metric.Data())
+				p.insertInToBuffer(s.Interface(), metric.Namespace().Strings())
+				p.updateCounters()
+			case reflect.Int32:
+				s := reflect.ValueOf(metric.Data())
+				p.insertInToBuffer(s.Interface(), metric.Namespace().Strings())
+				p.updateCounters()
+			case reflect.Int:
+				s := reflect.ValueOf(metric.Data())
+				p.insertInToBuffer(s.Interface(), metric.Namespace().Strings())
+				p.updateCounters()
+			case reflect.Uint64:
+				s := reflect.ValueOf(metric.Data())
+				p.insertInToBuffer(s.Interface(), metric.Namespace().Strings())
+				p.updateCounters()
+			case reflect.Uint32:
+				s := reflect.ValueOf(metric.Data())
 				p.insertInToBuffer(s.Interface(), metric.Namespace().Strings())
 				p.updateCounters()
 			}
-		}
-		var err error
-		var stats []plugin.MetricType
-		if p.bufferCurSize < p.bufferMaxSize {
-			stats, err = p.calculateStats(p.buffer[k][0:p.bufferCurSize], startTime, stopTime, k)
-			if err != nil {
-				log.Printf("Error occured in calculating Statistics: %s", err)
-				return "", nil, err
+
+			if p.bufferCurSize < p.bufferMaxSize {
+				log.Printf("Buffer: %v", p.buffer[k])
+				stats, err := p.calculateStats(p.buffer[k][0:p.bufferCurSize], startTime, stopTime, k, unit)
+				if err != nil {
+					log.Printf("Error occured in calculating Statistics: %s", err)
+					return "", nil, err
+				}
+				results = append(results, stats...)
+			} else if p.bufferCurSize == p.bufferMaxSize {
+				log.Printf("Buffer: %v", p.buffer[k])
+				stats, err := p.calculateStats(p.buffer[k], startTime, stopTime, k, unit)
+				if err != nil {
+					log.Printf("Error occured in calculating statistics: %s", err)
+					return "", nil, err
+				}
+				results = append(results, stats...)
+				//TODO create support function to reset start and stop time
 			}
-		} else {
-			stats, err = p.calculateStats(p.buffer[k], startTime, stopTime, k)
-			if err != nil {
-				log.Printf("Error occurred in calculating Statistics: %s", err)
-				return "", nil, err
-			}
 		}
-		results = append(results, stats...)
 	}
 
 	var buf bytes.Buffer
