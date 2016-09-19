@@ -27,6 +27,7 @@ import (
 	"reflect"
 	"strings"
 	"time"
+	"sort"	
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/intelsdi-x/snap/control/plugin"
@@ -368,7 +369,7 @@ func (p *Plugin) Kurtosis(buffer []float64) float64 {
 
 // concatNameSpace combines an array of namespces into a single string
 func concatNameSpace(namespace []string) string {
-	completeNamespace := strings.Join(namespace, "/")p.buffer[concatNameSpace(ns)][p.bufferIndex] = val
+	completeNamespace := strings.Join(namespace, "/")
 	return completeNamespace
 }
 
@@ -411,13 +412,28 @@ func (p *Plugin) GetConfigPolicy() (*cpolicy.ConfigPolicy, error) {
 	config.Add(r1)
 	cp.Add([]string{""}, config)
 
-	return cp, nil
+	return cp, nil	
+
+}
+
+type byTimestamp []plugin.MetricType 
+
+func (sa byTimestamp) Len() int {
+	return len(sa)
+}
+
+func (sa byTimestamp) Less(i, j int) bool {
+			return sa[i].Timestamp().Before(sa[j].Timestamp())
+
+}
+func (sa byTimestamp) Swap(i, j int) {
+			sa[i], sa[j] = sa[j], sa[i]
 }
 
 // Process processes the data, inputs the data into this' buffer and calls the descriptive statistics method
 func (p *Plugin) Process(contentType string, content []byte, config map[string]ctypes.ConfigValue) (string, []byte, error) {
 	var metrics []plugin.MetricType
-
+	
 	if config != nil {
 		if config["SlidingWindowLength"].(ctypes.ConfigValueInt).Value > 0 {
 			p.bufferMaxSize = config["SlidingWindowLength"].(ctypes.ConfigValueInt).Value
@@ -451,9 +467,13 @@ func (p *Plugin) Process(contentType string, content []byte, config map[string]c
 		var startTime time.Time
 		var stopTime time.Time
 		unit := v[0].Unit()
-
+		
+		sort.Sort(byTimestamp(v))
 		for _, metric := range v {
-
+			log.Printf("Sorted buffer: %v", metric.Timestamp_)		
+		}
+			for _, metric := range v {
+			log.Print(metric.Data())
 			time := metric.Timestamp()
 			if startTime.IsZero() {
 				startTime = time
@@ -501,6 +521,8 @@ func (p *Plugin) Process(contentType string, content []byte, config map[string]c
 				p.updateCounters()
 			}
 
+		//	sort.Sort(byTimestamp(p.buffer[k]))
+		//	log.Printf("Buffer: %v", p.buffer[k])
 			if p.bufferCurSize < p.bufferMaxSize {
 				log.Printf("Buffer: %v", p.buffer[k])
 				stats, err := p.calculateStats(p.buffer[k][0:p.bufferCurSize], startTime, stopTime, k, unit)
@@ -513,15 +535,13 @@ func (p *Plugin) Process(contentType string, content []byte, config map[string]c
 				log.Printf("Buffer: %v", p.buffer[k])
 				stats, err := p.calculateStats(p.buffer[k], startTime, stopTime, k, unit)
 				if err != nil {
-					log.Printf("Error occured in calculating statistics: %s", err)
+					log.Printf("Error occured in calculating Statistics: %s", err)
 					return "", nil, err
 				}
 				results = append(results, stats...)
-				//TODO create support function to reset start and stop time
-			}
+			} 
 		}
 	}
-
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
 	if err := enc.Encode(results); err != nil {

@@ -28,6 +28,7 @@ import (
 	"math/rand"
 	"testing"
 	"time"
+	"math/rand"
 
 	"github.com/intelsdi-x/snap/control/plugin"
 	"github.com/intelsdi-x/snap/control/plugin/cpolicy"
